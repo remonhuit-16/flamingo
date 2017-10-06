@@ -45,6 +45,9 @@ timestamps {
                 stage('Publish Results'){
                     junit allowEmptyResults: true, testResults: '**/target/surefire-reports/TEST-*.xml, **/target/failsafe-reports/TEST-*.xml'
                 }
+                stage('Test Coverage results') {
+                    jacoco exclusionPattern: '**/*Test.class'
+                }
             }
 
             stage('OWASP Dependency Check') {
