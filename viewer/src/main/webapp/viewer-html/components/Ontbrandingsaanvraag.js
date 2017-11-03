@@ -24,6 +24,7 @@
 Ext.define ("viewer.components.Ontbrandingsaanvraag",{
     extend: "viewer.components.tools.DownloadMap",
     vectorLayer: null,
+    vectorLinesLayer: null,
     extraObjectsLayer: null,
     calculationResultLayer: null,
     tempCalculationResultLayer: null,
@@ -82,6 +83,7 @@ Ext.define ("viewer.components.Ontbrandingsaanvraag",{
         } else {
             this.config.viewerController.mapComponent.getMap().addLayer(this.vectorLayer);
             this.config.viewerController.mapComponent.getMap().addLayer(this.extraObjectsLayer);
+            this.config.viewerController.mapComponent.getMap().addLayer(this.vectorLinesLayer);
         }
     },
 
@@ -90,6 +92,19 @@ Ext.define ("viewer.components.Ontbrandingsaanvraag",{
             this.createLayers();
         }
         return this.vectorLayer;
+    },
+
+    getVectorLinesLayer: function() {
+        if(this.vectorLinesLayer === null) {
+            this.createLayers();
+        }
+        return this.vectorLinesLayer;
+    },
+
+    getVectorLayerForType: function(type) {
+        return (type === this.EXTRA_OJBECT_TYPE || type === this.MEASURE_LINE_TYPE)
+            ? this.getVectorLinesLayer()
+            : this.getVectorLayer();
     },
 
     getExtraObjectsLayer: function() {
@@ -154,7 +169,16 @@ Ext.define ("viewer.components.Ontbrandingsaanvraag",{
         }));
         this.vectorLayer = this.config.viewerController.mapComponent.createVectorLayer({
             name: 'ontbrandingsAanvraagVectorLayer',
-            geometrytypes: ["Circle","Polygon","Point","LineString"],
+            geometrytypes: ["Circle","Polygon"],
+            showmeasures: true,
+            viewerController: this.config.viewerController,
+            defaultFeatureStyle: this.defaultStyle,
+            addStyleToFeature: true,
+            addAttributesToFeature: true
+        });
+        this.vectorLinesLayer = this.config.viewerController.mapComponent.createVectorLayer({
+            name: 'ontbrandingsAanvraagLinesVectorLayer',
+            geometrytypes: ["Point","LineString"],
             showmeasures: true,
             viewerController: this.config.viewerController,
             defaultFeatureStyle: this.defaultStyle,
@@ -167,7 +191,8 @@ Ext.define ("viewer.components.Ontbrandingsaanvraag",{
             showmeasures: false,
             viewerController: this.config.viewerController,
             defaultFeatureStyle: this.defaultStyle,
-            addStyleToFeature: true
+            addStyleToFeature: true,
+            allowselection: false
         });
         this.calculationResultLayer = this.config.viewerController.mapComponent.createVectorLayer({
             name: 'calculationResultLayer',
@@ -186,10 +211,13 @@ Ext.define ("viewer.components.Ontbrandingsaanvraag",{
         });        
         this.config.viewerController.mapComponent.getMap().addLayer(this.calculationResultLayer);
         this.config.viewerController.mapComponent.getMap().addLayer(this.tempCalculationResultLayer);
-        this.config.viewerController.mapComponent.getMap().addLayer(this.extraObjectsLayer);
         this.config.viewerController.mapComponent.getMap().addLayer(this.vectorLayer);
+        this.config.viewerController.mapComponent.getMap().addLayer(this.extraObjectsLayer);
+        this.config.viewerController.mapComponent.getMap().addLayer(this.vectorLinesLayer);
         this.vectorLayer.addListener(viewer.viewercontroller.controller.Event.ON_ACTIVE_FEATURE_CHANGED, this.activeFeatureChanged, this);
         this.vectorLayer.addListener(viewer.viewercontroller.controller.Event.ON_FEATURE_ADDED, this.activeFeatureFinished, this);
+        this.vectorLinesLayer.addListener(viewer.viewercontroller.controller.Event.ON_ACTIVE_FEATURE_CHANGED, this.activeFeatureChanged, this);
+        this.vectorLinesLayer.addListener(viewer.viewercontroller.controller.Event.ON_FEATURE_ADDED, this.activeFeatureFinished, this);
     },
 
     /**
@@ -825,7 +853,7 @@ Ext.define ("viewer.components.Ontbrandingsaanvraag",{
         if(!extraObject) {
             return;
         }
-        var feature = this.getVectorLayer().getFeatureById(extraObject.get('fid'));
+        var feature = this.getVectorLinesLayer().getFeatureById(extraObject.get('fid'));
         var featureStyle = feature.getStyle();
         if(!featureStyle) {
             featureStyle = Ext.create('viewer.viewercontroller.controller.FeatureStyle', {});
@@ -834,7 +862,7 @@ Ext.define ("viewer.components.Ontbrandingsaanvraag",{
         featureStyle.set('strokeDashstyle', extraObject.get('dashStyle'));
         featureStyle.set('label', '');
         featureStyle.set('strokeWidth', 4);
-        this.getVectorLayer().setFeatureStyle(extraObject.get('fid'), featureStyle);
+        this.getVectorLinesLayer().setFeatureStyle(extraObject.get('fid'), featureStyle);
         this.updateExtraObjectLabel(extraObject);
     },
 
@@ -842,7 +870,7 @@ Ext.define ("viewer.components.Ontbrandingsaanvraag",{
         var longest_component = 0;
         var start = null;
         var end = null;
-        var components = this.getVectorLayer().getFeatureGeometry(extraObject.get('fid')).components;
+        var components = this.getVectorLinesLayer().getFeatureGeometry(extraObject.get('fid')).components;
         if(!components) {
             return;
         }
@@ -949,14 +977,14 @@ Ext.define ("viewer.components.Ontbrandingsaanvraag",{
             drawingName = "publiekslocatie";
         }
         if(drawType === this.MEASURE_LINE_TYPE) {
-            this.getVectorLayer().defaultFeatureStyle = this.measureLineStyle;
+            this.getVectorLinesLayer().defaultFeatureStyle = this.measureLineStyle;
             drawingName = "afstandslijn";
         }
         if(drawType === this.EXTRA_OJBECT_TYPE) {
             drawingName = "hulplijn";
         }
         if(drawType === this.EXTRA_OJBECT_TYPE || drawType === this.MEASURE_LINE_TYPE) {
-            this.getVectorLayer().drawFeature("LineString");
+            this.getVectorLinesLayer().drawFeature("LineString");
         } else {
             this.getVectorLayer().drawFeature("Polygon");
         }
@@ -1005,10 +1033,11 @@ Ext.define ("viewer.components.Ontbrandingsaanvraag",{
             return;
         }
         var location = this._showEditForm(grid, rowIndex);
+        var location_type = location.get('type');
         if(!skipSetSelection) {
             grid.setSelection(location);
         }
-        this.getVectorLayer().editFeatureById(location.get('fid'));
+        this.getVectorLayerForType(location_type).editFeatureById(location.get('fid'));
     },
 
     _showEditForm: function(grid, rowIndex) {
@@ -1057,8 +1086,9 @@ Ext.define ("viewer.components.Ontbrandingsaanvraag",{
 
     _removeLocation: function(grid, rowIndex) {
         var record = grid.getStore().getAt(rowIndex);
-        this.getVectorLayer().removeFeature(this.getVectorLayer().getFeatureById(record.get('fid')));
-        if(record.get('type') === this.EXTRA_OJBECT_TYPE || record.get('type') === this.MEASURE_LINE_TYPE) {
+        var record_type = record.get('type');
+        this.getVectorLayerForType(record_type).removeFeature(this.getVectorLayerForType(record_type).getFeatureById(record.get('fid')));
+        if(record_type === this.EXTRA_OJBECT_TYPE || record_type === this.MEASURE_LINE_TYPE) {
             this.removeExtraObjects(record);
         }
         grid.getStore().removeAt(rowIndex);
@@ -1170,23 +1200,29 @@ Ext.define ("viewer.components.Ontbrandingsaanvraag",{
     importFeatures: function(json) {
         var feature;
         var features = [];
-        var extent = null;;
+        var line_features = [];
+        var extent = null;
         for(var i = 0; i < json.features.length; i++) {
             feature = json.features[i];
             var flaFeature = this.createFeature(feature.wktgeom, this.createFeatureStyle(feature.style), feature.attributes);
             if(!extent){
                 extent = flaFeature.getExtent();
-            }else{
+            } else {
                 var newExtent = flaFeature.getExtent();
                 extent.expand(newExtent);
             }
-            features.push(flaFeature);
+            if(feature.attributes.type === this.EXTRA_OJBECT_TYPE || feature.attributes.type === this.MEASURE_LINE_TYPE) {
+                line_features.push(flaFeature);
+            } else {
+                features.push(flaFeature);
+            }
         }
         extent.buffer(150);
         this.config.viewerController.mapComponent.getMap().zoomToExtent(extent);
         this.removeAllFeatures();
         this.isImporting = true;
         this.getVectorLayer().addFeatures(features);
+        this.getVectorLinesLayer().addFeatures(line_features);
         this.isImporting = false;
         this.nextPage();
     },
@@ -1264,7 +1300,8 @@ Ext.define ("viewer.components.Ontbrandingsaanvraag",{
 
     getFeatureForItem: function(item) {
         var featureId = item.get('fid');
-        var feature = this.getVectorLayer().getFeatureById(featureId);
+        var feature_type = item.get('type');
+        var feature = this.getVectorLayerForType(feature_type).getFeatureById(featureId);
         var raw_data = feature.toJsonObject();
         raw_data.attributes = item.getData();
         if(raw_data.attributes.type === this.IGNITION_LOCATION_TYPE) {
@@ -1275,7 +1312,7 @@ Ext.define ("viewer.components.Ontbrandingsaanvraag",{
                 ? raw_data.attributes.custom_zonedistance_professional
                 : this.ZONE_DISTANCES_PROFESSIONAL[raw_data.attributes.zonedistance_professional];
         }
-        raw_data.style = this.getVectorLayer().frameworkStyleToFeatureStyle(feature.style).getProperties();
+        raw_data.style = this.getVectorLayerForType(feature_type).frameworkStyleToFeatureStyle(feature).getProperties();
         delete raw_data.id;
         delete raw_data.attributes.id;
         delete raw_data.attributes.fid;
@@ -1303,6 +1340,7 @@ Ext.define ("viewer.components.Ontbrandingsaanvraag",{
 
     deselectAllFeatures: function() {
         this.getVectorLayer().unselectAll();
+        this.getVectorLinesLayer().unselectAll();
         this.getExtraObjectsLayer().unselectAll();
     },
 
@@ -1319,7 +1357,7 @@ Ext.define ("viewer.components.Ontbrandingsaanvraag",{
             this.features[feature.config.id] = feature;
         }
         this.activeFeature = this.features[feature.config.id];
-        this.editActiveFeature(this.getVectorLayer().getFeatureSize(feature.config.id));
+        this.editActiveFeature(vectorLayer.getFeatureSize(feature.config.id));
     },
 
     activeFeatureFinished : function (vectorLayer, feature) {
