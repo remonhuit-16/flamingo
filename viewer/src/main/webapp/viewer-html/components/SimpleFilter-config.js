@@ -66,7 +66,7 @@ Ext.define("viewer.components.CustomConfiguration",{
         Ext.create('Ext.panel.Panel', {
             border: 0,
             width: 730,
-            height: 800,
+            height: 845,
             layout: {
                 type: 'vbox',
                 align: 'stretch'
@@ -96,11 +96,14 @@ Ext.define("viewer.components.CustomConfiguration",{
                 items: [{
                     xtype: 'form',
                     border: 0,
-                    height: '100%',
                     flex: 0.6,
                     fieldDefaults: {
                         msgTarget: 'side',
                         labelWidth: 150
+                    },
+                    layout: {
+                        type: 'vbox',
+                        align: 'stretch'
                     },
                     items: [{
                         xtype: 'combo',
@@ -124,7 +127,10 @@ Ext.define("viewer.components.CustomConfiguration",{
                         title: "Instellingen voor filter",
                         collapsible: false,
                         defaultType: "textfield",
-                        layout: "anchor",
+                        layout: {
+                            type: 'vbox',
+                            align: 'stretch'
+                        },
                         items: [{
                             xtype: "combo",
                             itemId: "layerCombo",
@@ -191,20 +197,15 @@ Ext.define("viewer.components.CustomConfiguration",{
                         collapsible: false,
                         defaultType: "textfield",
                         layout: "fit",
-                        height: 600,
-                        scrollable: true,
-                        // defaults: {
-                        //     anchor: '100%',
-                        //     width: 500
-                        // },
-                        items: []
+                        flex: 1,
+                        items: [],
+                        margin: 0
                     }]
                 },{
                     xtype: 'panel',
                     border: 0,
                     width: 30,
-                    margin: '0 0 0 10',
-                    height: 250,
+                    margin: '0 0 50 10',
                     layout: {
                         type: "vbox",
                         pack: "center"
@@ -273,7 +274,6 @@ Ext.define("viewer.components.CustomConfiguration",{
                     xtype: 'gridpanel',
                     itemId: 'configuredFiltersGrid',
                     title: 'Toegevoegde filters',
-                    height: 430,
                     flex: 0.4,
                     store: this.filterStore,
                     columns: [

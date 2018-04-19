@@ -29,10 +29,9 @@ Ext.define("viewer.components.sf.Config", {
             title: this.getTitle(),
             width: 325,
             bodyPadding: 5,
-            layout: 'anchor',
-            defaults: {
-                anchor: '100%',
-                flex:1
+            layout: {
+                type: 'vbox',
+                align: 'stretch'
             },
             defaultType: 'textfield',
             items: items
@@ -230,8 +229,7 @@ Ext.define("viewer.components.sf.CheckboxConfig", {
                 pluginId: 'celleditor'
             },
             columns: columns,
-            height: 150,
-            width: 315
+            flex: 1
         });
         items.push(
             {
