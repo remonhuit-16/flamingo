@@ -241,6 +241,7 @@ Ext.define ("viewer.components.SpatialFilter",{
         if(appLayer !== null){
             buttons.setDisabled(false);
             this.vectorLayer.removeAllFeatures();
+            this.features = [];
         }else{
             buttons.setDisabled(true);
             this.cancel();
