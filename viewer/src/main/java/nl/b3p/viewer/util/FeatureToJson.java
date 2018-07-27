@@ -54,6 +54,8 @@ import org.opengis.filter.sort.SortOrder;
 
 import javax.persistence.EntityManager;
 import javax.servlet.http.HttpServletRequest;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  *
@@ -62,6 +64,8 @@ import javax.servlet.http.HttpServletRequest;
 
 
 public class FeatureToJson {
+
+    private static final Log LOG = LogFactory.getLog(FeatureToJson.class);
     public static final int MAX_FEATURES = 1000;
     private boolean arrays = false;
     private boolean edit = false;
@@ -187,17 +191,14 @@ public class FeatureToJson {
                 propertyNames.add(ad.getName());
             }
         }
-        
-        if (sort!=null){
+
+        if (sort != null) {
             setSortBy(q, propertyNames, sort, dir);
-        }
-        /* Use the first property as sort field, otherwise geotools while give a error when quering
-         * a JDBC featureType without a primary key.
-         */
-        else if ( (fs instanceof org.geotools.jdbc.JDBCFeatureSource || fs.getDataStore() instanceof WFSDataStore ) && !propertyNames.isEmpty()){
+        } else if ((fs instanceof org.geotools.jdbc.JDBCFeatureSource || fs.getDataStore() instanceof WFSDataStore) && !propertyNames.isEmpty()) {
+            /* Use the first property as sort field, otherwise geotools while give a error when quering a JDBC featureType without a primary key. */
             int index = 0;
             if (fs.getSchema().getGeometryDescriptor() != null && fs.getSchema().getGeometryDescriptor().getLocalName().equals(propertyNames.get(0))) {
-                if(propertyNames.size() > 1){
+                if (propertyNames.size() > 1) {
                     index = 1;
                 }else {
                     index = -1;
@@ -205,6 +206,9 @@ public class FeatureToJson {
             }
             if(index != -1){
                 setSortBy(q, propertyNames.get(index),dir);
+            } else {
+                LOG.debug("not setting sortby");
+                q.setSortBy(SortBy.UNSORTED);
             }
         }
         Integer start = q.getStartIndex();
@@ -218,7 +222,7 @@ public class FeatureToJson {
         }
         FeatureIterator<SimpleFeature> it = null;
         JSONArray features = new JSONArray();
-        try{
+        try {
             it=fs.getFeatures(q).features();
             int featureIndex=0;
             while(it.hasNext()){
