@@ -16,7 +16,7 @@
  */
 package nl.b3p.viewer.stripes;
 
-import com.vividsolutions.jts.geom.Geometry;
+import org.locationtech.jts.geom.Geometry;
 import java.io.IOException;
 import java.io.StringReader;
 import net.sourceforge.stripes.action.ActionBean;
